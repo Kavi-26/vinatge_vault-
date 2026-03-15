@@ -8,11 +8,15 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  Dimensions,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { db } from "../firebaseConfig";
 import { collection, getDocs, deleteDoc, doc, query } from "firebase/firestore";
 import Ionicons from "react-native-vector-icons/Ionicons";
+
+const { width } = Dimensions.get("window");
 
 const ManageProducts = ({ navigation }) => {
   const [products, setProducts] = useState([]);
@@ -62,37 +66,51 @@ const ManageProducts = ({ navigation }) => {
   };
 
   const renderProductItem = ({ item }) => (
-    <View style={styles.productCard}>
-      <Image source={{ uri: item.image }} style={styles.productImage} />
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.productPrice}>₹{item.price.toLocaleString()}</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>In Stock</Text>
+    <View style={styles.card}>
+      <Image source={{ uri: item.image }} style={styles.cardImage} />
+      <View style={styles.cardBody}>
+        <View style={styles.cardInfo}>
+          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.productPrice}>₹{item.price?.toLocaleString() || "0"}</Text>
+          <View style={styles.stockBadge}>
+            <View style={styles.stockDot} />
+            <Text style={styles.stockText}>In Stock</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Add", { product: item })} 
-          style={styles.editButton}
-        >
-          <Ionicons name="create-outline" size={22} color="#007BFF" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-          <Ionicons name="trash-outline" size={22} color="#F44336" />
-        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Add", { product: item })}
+            style={styles.editBtn}
+          >
+            <Ionicons name="create-outline" size={18} color="#4F6DF5" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={18} color="#EF5350" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerArea}>
-        <Text style={styles.headerTitle}>Product Catalog</Text>
-        <Text style={styles.headerSubtitle}>{products.length} Items Available</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Products</Text>
+          <Text style={styles.headerSub}>{products.length} item{products.length !== 1 ? "s" : ""} in catalog</Text>
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate("Add")}>
+          <Ionicons name="add" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
+
       {loading ? (
-        <ActivityIndicator size="large" color="#1B3BBB" style={styles.loader} />
+        <View style={styles.loaderWrap}>
+          <ActivityIndicator size="large" color="#4F6DF5" />
+          <Text style={styles.loaderText}>Loading products...</Text>
+        </View>
       ) : (
         <FlatList
           data={products}
@@ -101,9 +119,12 @@ const ManageProducts = ({ navigation }) => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={80} color="#ddd" />
-              <Text style={styles.emptyText}>No products found.</Text>
+            <View style={styles.emptyWrap}>
+              <View style={styles.emptyCircle}>
+                <Ionicons name="cube-outline" size={40} color="#C5CAE9" />
+              </View>
+              <Text style={styles.emptyTitle}>No Products</Text>
+              <Text style={styles.emptySub}>Tap + to add your first product.</Text>
             </View>
           }
         />
@@ -115,102 +136,160 @@ const ManageProducts = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F7FE",
+    backgroundColor: "#F0F4FF",
   },
-  headerArea: {
-    padding: 25,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 22,
+    paddingTop: 15,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E5F2",
+    borderBottomColor: "#E8ECF4",
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1B3BBB",
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F1B4C",
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 4,
+  headerSub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 2,
+    fontWeight: "500",
   },
-  loader: {
-    marginTop: 100,
-  },
-  listContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  productCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 12,
-    flexDirection: "row",
+  addBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#4F6DF5",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 15,
     elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowColor: "#4F6DF5",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
-  productImage: {
-    width: 85,
-    height: 85,
-    borderRadius: 15,
-    marginRight: 15,
-    backgroundColor: "#F8FAFF",
-  },
-  productInfo: {
+  loaderWrap: {
     flex: 1,
     justifyContent: "center",
+    alignItems: "center",
+  },
+  loaderText: {
+    marginTop: 12,
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  listContent: {
+    padding: 18,
+    paddingBottom: 40,
+  },
+
+  // Card
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    marginBottom: 14,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  cardImage: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#EEF2FF",
+  },
+  cardBody: {
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardInfo: {
+    flex: 1,
   },
   productName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1a1a2e",
   },
   productPrice: {
     fontSize: 16,
-    color: "#1B3BBB",
-    fontWeight: "bold",
+    color: "#4F6DF5",
+    fontWeight: "700",
     marginTop: 4,
   },
-  badge: {
+  stockBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#E8F5E9",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
     alignSelf: "flex-start",
     marginTop: 8,
+    gap: 4,
   },
-  badgeText: {
+  stockDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#4CAF50",
+  },
+  stockText: {
     color: "#4CAF50",
-    fontSize: 11,
-    fontWeight: "bold",
+    fontSize: 10,
+    fontWeight: "700",
   },
-  actions: {
-    flexDirection: "row",
-    gap: 5,
+  cardActions: {
+    gap: 8,
   },
-  editButton: {
-    padding: 10,
-    backgroundColor: "#F0F7FF",
-    borderRadius: 12,
-  },
-  deleteButton: {
-    padding: 10,
-    backgroundColor: "#FFF2F2",
-    borderRadius: 12,
-  },
-  emptyContainer: {
+  editBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 100,
   },
-  emptyText: {
-    marginTop: 15,
-    fontSize: 16,
+  deleteBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "#FFF0F0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Empty
+  emptyWrap: {
+    alignItems: "center",
+    marginTop: 80,
+  },
+  emptyCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  emptySub: {
+    fontSize: 13,
     color: "#999",
-    fontWeight: "500",
+    marginTop: 4,
   },
 });
 

@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { db } from "../firebaseConfig";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
@@ -53,108 +54,205 @@ const AddProduct = ({ navigation, route }) => {
     }
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.formCard}>
-        <Text style={styles.label}>Product Name</Text>
+  const InputField = ({ label, icon, value, onChangeText, multiline, keyboardType, lines }) => (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputRow, multiline && styles.inputRowMulti]}>
+        <Ionicons name={icon} size={18} color="#9DA5B4" style={styles.inputIcon} />
         <TextInput
-          style={styles.input}
-          placeholder="Enter product name"
-          value={productName}
-          onChangeText={setProductName}
+          style={[styles.input, multiline && styles.inputMulti]}
+          value={value}
+          onChangeText={onChangeText}
+          multiline={multiline}
+          numberOfLines={lines}
+          keyboardType={keyboardType || "default"}
         />
-
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter description"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        <Text style={styles.label}>Price (₹)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter price"
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>Image URL</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter image URL"
-          value={image}
-          onChangeText={setImage}
-        />
-
-        <Text style={styles.label}>Additional Details</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter additional details"
-          value={details}
-          onChangeText={setDetails}
-          multiline
-        />
-
-        <TouchableOpacity style={styles.primaryButton} onPress={handleAddProduct}>
-          <Text style={styles.buttonText}>{existingProduct ? "Update Product" : "Submit Product"}</Text>
-        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Title */}
+        <View style={styles.titleArea}>
+          <View style={styles.titleIcon}>
+            <Ionicons
+              name={existingProduct ? "create" : "add-circle"}
+              size={24}
+              color="#4F6DF5"
+            />
+          </View>
+          <View>
+            <Text style={styles.titleText}>
+              {existingProduct ? "Edit Product" : "New Product"}
+            </Text>
+            <Text style={styles.titleSub}>
+              {existingProduct ? "Update the details below" : "Fill in the details to add"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          <InputField
+            label="Product Name"
+            icon="pricetag-outline"
+            value={productName}
+            onChangeText={setProductName}
+          />
+          <InputField
+            label="Description"
+            icon="document-text-outline"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            lines={3}
+          />
+          <InputField
+            label="Price (₹)"
+            icon="cash-outline"
+            value={price}
+            onChangeText={setPrice}
+            keyboardType="numeric"
+          />
+          <InputField
+            label="Image URL"
+            icon="image-outline"
+            value={image}
+            onChangeText={setImage}
+          />
+          <InputField
+            label="Additional Details"
+            icon="information-circle-outline"
+            value={details}
+            onChangeText={setDetails}
+            multiline
+            lines={3}
+          />
+
+          <TouchableOpacity style={styles.submitBtn} onPress={handleAddProduct} activeOpacity={0.85}>
+            <Text style={styles.submitBtnText}>
+              {existingProduct ? "Update Product" : "Add Product"}
+            </Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    padding: 20,
-    backgroundColor: "#F4F7FE",
-    flexGrow: 1,
-    justifyContent: "center",
+  container: {
+    flex: 1,
+    backgroundColor: "#F0F4FF",
   },
+  scrollContent: {
+    padding: 18,
+    paddingBottom: 40,
+  },
+
+  // Title
+  titleArea: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 14,
+    paddingHorizontal: 4,
+  },
+  titleIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  titleText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F1B4C",
+  },
+  titleSub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+
+  // Form
   formCard: {
     backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    elevation: 5,
-    shadowColor: "#000",
+    borderRadius: 24,
+    padding: 22,
+    elevation: 4,
+    shadowColor: "#0F1B4C",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+  },
+  fieldGroup: {
+    marginBottom: 18,
   },
   label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#444",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#555",
     marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F7FB",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E8ECF4",
+    paddingHorizontal: 14,
+  },
+  inputRowMulti: {
+    alignItems: "flex-start",
+    paddingTop: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
+    marginTop: 0,
   },
   input: {
-    backgroundColor: "#F8FAFF",
-    borderWidth: 1,
-    borderColor: "#E0E5F2",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
-    color: "#333",
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#1a1a2e",
+    fontWeight: "500",
   },
-  textArea: {
-    height: 100,
+  inputMulti: {
+    height: 80,
     textAlignVertical: "top",
   },
-  primaryButton: {
-    backgroundColor: "#2196F3",
-    paddingVertical: 15,
-    borderRadius: 12,
+  submitBtn: {
+    backgroundColor: "#0F1B4C",
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 8,
+    gap: 8,
+    elevation: 6,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
-  buttonText: {
+  submitBtnText: {
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
 
