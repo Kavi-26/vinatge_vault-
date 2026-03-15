@@ -57,14 +57,14 @@ const ManageOrders = () => {
         <View style={styles.infoRow}>
           <Ionicons name="calendar-outline" size={16} color="#777" />
           <Text style={styles.infoText}>
-            {item.createdAt ? new Date(item.createdAt.toDate()).toLocaleDateString('en-IN', {
+            {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString('en-IN', {
               day: '2-digit', month: 'short', year: 'numeric'
-            }) : "N/A"}
+            }) : "Date N/A"}
           </Text>
         </View>
         <View style={styles.amountGroup}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.orderAmount}>₹{item.totalPrice.toLocaleString()}</Text>
+          <Text style={styles.orderAmount}>₹{item.totalPrice?.toLocaleString() || "0"}</Text>
         </View>
       </View>
       
