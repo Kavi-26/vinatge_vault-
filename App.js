@@ -21,12 +21,16 @@ import AuctionDetails from "./screen/AuctionDetails";
 import AdminPage from "./screen/AdminPage"; // Import the AdminPage component
 import ProductDetailsScreen from "./screen/ProductDetailsScreen";
 import OrderPlacedScreen from "./screen/OrderPlacedScreen";
+import ManageProducts from "./screen/ManageProducts";
+import AddProduct from "./screen/AddProduct";
+import ManageUsers from "./screen/ManageUsers";
+import ManageOrders from "./screen/ManageOrders";
 // Stack Navigator
 const Stack = createStackNavigator();
 // Tab Navigator
 const Tab = createBottomTabNavigator();
 
-// Tab Navigator Component
+// Tab Navigator Component for Users
 function TabNavigator() {
   return (
     <Tab.Navigator
@@ -46,10 +50,10 @@ function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "black", // Black color for active icons
-        tabBarInactiveTintColor: "black", // Black color for inactive icons
+        tabBarActiveTintColor: "black",
+        tabBarInactiveTintColor: "gray",
         tabBarStyle: {
-          backgroundColor: "white", // Optional: Keep the tab bar white for contrast
+          backgroundColor: "white",
         },
       })}
     >
@@ -57,6 +61,44 @@ function TabNavigator() {
       <Tab.Screen name="Store" component={StoreScreen} />
       <Tab.Screen name="Auction" component={AuctionScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// Tab Navigator Component for Admins
+function AdminTabNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === "Dashboard") {
+            iconName = focused ? "grid" : "grid-outline";
+          } else if (route.name === "Products") {
+            iconName = focused ? "cube" : "cube-outline";
+          } else if (route.name === "Add") {
+            iconName = focused ? "add-circle" : "add-circle-outline";
+          } else if (route.name === "Users") {
+            iconName = focused ? "people" : "people-outline";
+          } else if (route.name === "Orders") {
+            iconName = focused ? "receipt" : "receipt-outline";
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: "#1B3BBB",
+        tabBarInactiveTintColor: "gray",
+        tabBarStyle: {
+          backgroundColor: "white",
+        },
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={AdminPage} options={{ title: "Admin Portal" }} />
+      <Tab.Screen name="Products" component={ManageProducts} options={{ title: "Products" }} />
+      <Tab.Screen name="Add" component={AddProduct} options={{ title: "Add New" }} />
+      <Tab.Screen name="Users" component={ManageUsers} options={{ title: "Users" }} />
+      <Tab.Screen name="Orders" component={ManageOrders} options={{ title: "Orders" }} />
     </Tab.Navigator>
   );
 }
@@ -128,9 +170,9 @@ export default function App() {
                 options={{ headerShown: true }}
                 />
                 <Stack.Screen
-                 name="Admin"
-                 component={AdminPage}
-                 options={{headerShown: true}}
+                 name="AdminTabs"
+                 component={AdminTabNavigator}
+                 options={{headerShown: false}}
                 />
 
             </>

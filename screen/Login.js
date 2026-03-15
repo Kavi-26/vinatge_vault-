@@ -11,7 +11,8 @@ import {
     Platform,
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebaseConfig";
 
 const Login = ({ navigation }) => {
     const [email, setEmail] = useState("");
@@ -38,9 +39,26 @@ const Login = ({ navigation }) => {
         if (!validateInput()) return;
         setIsLoading(true);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            Alert.alert("Success", "Login successful!");
-            // Navigate to the home screen after login
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Fetch user role from Firestore
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.admin === true) {
+                    Alert.alert("Success", "Admin login successful!");
+                    navigation.replace("AdminTabs");
+                } else {
+                    Alert.alert("Success", "Login successful!");
+                    navigation.replace("Home1");
+                }
+            } else {
+                // If user doc doesn't exist, assume regular user or handle error
+                Alert.alert("Success", "Login successful!");
+                navigation.replace("Home1");
+            }
            
         } catch (error) {
             Alert.alert("Error", error.message);

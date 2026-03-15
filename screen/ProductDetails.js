@@ -1,13 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Modal, FlatList } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const ProductDetails = ({ route, navigation }) => {
     const { item } = route.params;
     const [showQRCode, setShowQRCode] = useState(false);
+    const [showPaymentSelection, setShowPaymentSelection] = useState(false);
+    const [selectedMethod, setSelectedMethod] = useState(null);
+
+    const paymentMethods = [
+        { id: 'gpay', name: 'Google Pay', icon: 'google', color: '#4285F4', type: 'material' },
+        { id: 'paytm', name: 'Paytm', icon: 'wallet-outline', color: '#00BAF2', type: 'ionicon' },
+        { id: 'phonepay', name: 'PhonePe', icon: 'send-outline', color: '#6739B7', type: 'ionicon' },
+        { id: 'paypal', name: 'PayPal', icon: 'logo-paypal', color: '#003087', type: 'ionicon' },
+    ];
 
     const handlePayment = () => {
-        console.log('Proceeding to payment for', item.name);
-        setShowQRCode(true); // Show QR code modal
+        setShowPaymentSelection(true);
+    };
+
+    const handleSelectMethod = (method) => {
+        setSelectedMethod(method);
+        setShowPaymentSelection(false);
+        setShowQRCode(true);
     };
 
     // Calculate the discounted price
@@ -42,16 +58,51 @@ const ProductDetails = ({ route, navigation }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* QR Code Modal */}
-            <Modal visible={showQRCode} transparent={true} animationType="slide">
+            {/* Payment Selection Modal */}
+            <Modal visible={showPaymentSelection} transparent={true} animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.selectionCard}>
+                        <Text style={styles.modalTitle}>Select Payment Method</Text>
+                        {paymentMethods.map((method) => (
+                            <TouchableOpacity
+                                key={method.id}
+                                style={styles.paymentOption}
+                                onPress={() => handleSelectMethod(method)}
+                            >
+                                <View style={[styles.iconContainer, { backgroundColor: method.color }]}>
+                                    {method.type === 'material' ? (
+                                        <MaterialCommunityIcons name={method.icon} size={24} color="#fff" />
+                                    ) : (
+                                        <Ionicons name={method.icon} size={24} color="#fff" />
+                                    )}
+                                </View>
+                                <Text style={styles.methodName}>{method.name}</Text>
+                                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                            </TouchableOpacity>
+                        ))}
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setShowPaymentSelection(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* QR Code Modal (Updated for dynamic methods) */}
+            <Modal visible={showQRCode} transparent={true} animationType="fade">
                 <View style={styles.modalContainer}>
                     <View style={styles.gpayCard}>
                         <View style={styles.header}>
-                            {/* Placeholder for app or brand logo */}
-                            <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>P</Text>
+                            <View style={[styles.avatar, { backgroundColor: selectedMethod?.color || '#007BFF' }]}>
+                                {selectedMethod?.id === 'gpay' && <MaterialCommunityIcons name="google" size={24} color="#fff" />}
+                                {selectedMethod?.id === 'paytm' && <Ionicons name="wallet-outline" size={24} color="#fff" />}
+                                {selectedMethod?.id === 'phonepay' && <Ionicons name="send-outline" size={24} color="#fff" />}
+                                {selectedMethod?.id === 'paypal' && <Ionicons name="logo-paypal" size={24} color="#fff" />}
+                                {!selectedMethod && <Text style={styles.avatarText}>P</Text>}
                             </View>
-                            <Text style={styles.gpayText}>Pay with GPay</Text>
+                            <Text style={styles.gpayText}>Pay with {selectedMethod?.name || 'Payment'}</Text>
                         </View>
 
                         {/* Amount Display */}
@@ -59,16 +110,16 @@ const ProductDetails = ({ route, navigation }) => {
 
                         {/* QR Code Image Display */}
                         <Image
-                            source={require('../assets/gpay1.jpg')} // Replace with your QR image path
+                            source={require('../assets/gpay1.jpg')} // Using the existing QR image as requested (no placeholder)
                             style={styles.qrCodeImage}
                         />
 
                         {/* Instruction Text */}
                         <Text style={styles.instructionText}>
-                            Scan the QR code to complete your payment
+                            Scan the QR code to complete your payment via {selectedMethod?.name}
                         </Text>
 
-                        {/* Close Button */}
+                        {/* Done Button */}
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => {
@@ -76,7 +127,7 @@ const ProductDetails = ({ route, navigation }) => {
                                 navigation.navigate('OrderPlaced'); // Navigate to OrderPlaced screen
                             }}
                         >
-                            <Text style={styles.closeButtonText}>Close</Text>
+                            <Text style={styles.closeButtonText}>Done</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -179,14 +230,69 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    selectionCard: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 25,
+        borderTopRightRadius: 25,
+        padding: 25,
+        maxHeight: '60%',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    paymentOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    iconContainer: {
+        width: 45,
+        height: 45,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    methodName: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+    },
+    cancelButton: {
+        marginTop: 20,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: '#FF5733',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     gpayCard: {
         backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 12,
+        padding: 25,
+        borderRadius: 20,
         alignItems: 'center',
-        width: '80%',
+        width: '85%',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
     },
     header: {
         flexDirection: 'row',
@@ -194,17 +300,17 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: '#007BFF',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 12,
     },
     avatarText: {
         color: '#fff',
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
     },
     gpayText: {
@@ -213,7 +319,7 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     amountDisplay: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 20,
@@ -227,19 +333,21 @@ const styles = StyleSheet.create({
     instructionText: {
         fontSize: 14,
         color: '#666',
-        marginTop: 20,
+        marginTop: 10,
         textAlign: 'center',
+        paddingHorizontal: 10,
     },
     closeButton: {
-        marginTop: 20,
+        marginTop: 25,
         backgroundColor: '#FF5733',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 40,
+        borderRadius: 12,
     },
     closeButtonText: {
         color: '#fff',
         fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

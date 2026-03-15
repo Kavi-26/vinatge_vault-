@@ -1,179 +1,126 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from "react-native";
-import { db } from "../firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebaseConfig";
 
 const AdminPage = ({ navigation }) => {
-  const [productName, setProductName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [image, setImage] = useState(""); // New field for image URL
-  const [details, setDetails] = useState(""); // New field for additional product details
-
-  // Handle form submission
-  const handleAddProduct = async () => {
-    if (!productName || !description || !price || !image) {
-      Alert.alert("Error", "All fields are required!");
-      return;
-    }
-
-    try {
-      const newProduct = {
-        name: productName,
-        about: description,
-        price: parseFloat(price), // Convert price to a number
-        image: image,
-        detail: details,
-        createdAt: new Date(), // Timestamp for when the product is added
-      };
-
-      await addDoc(collection(db, "products"), newProduct); // Add new product to Firestore
-      Alert.alert("Success", "Product added successfully!");
-      
-      // Reset fields after adding
-      setProductName("");
-      setDescription("");
-      setPrice("");
-      setImage("");
-      setDetails("");
-    } catch (error) {
-      Alert.alert("Error", "Failed to add the product. Please try again.");
-    }
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut(auth);
+            // App.js handles navigation automatically on auth state change
+          } catch (error) {
+            Alert.alert("Error", "Failed to log out.");
+          }
+        },
+      },
+    ]);
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Admin Panel</Text>
-      <Text style={styles.subtitle}>Add New Product</Text>
+    <View style={styles.mainContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+          <Text style={styles.subtitle}>Manage your store from the tabs below</Text>
+        </View>
 
-      <View style={styles.form}>
-        {/* Product Name */}
-        <Text style={styles.label}>Product Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter product name"
-          placeholderTextColor="#888" // Light gray placeholder text
-          value={productName}
-          onChangeText={setProductName}
-        />
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>V</Text>
+            <Text style={styles.statLabel}>Vintage Vault</Text>
+          </View>
+        </View>
 
-        {/* Description */}
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter description"
-          placeholderTextColor="#888" // Light gray placeholder text
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        {/* Price */}
-        <Text style={styles.label}>Price (in ₹)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter price"
-          placeholderTextColor="#888" // Light gray placeholder text
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-        />
-
-        {/* Image URL */}
-        <Text style={styles.label}>Image URL</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter image URL"
-          placeholderTextColor="#888" // Light gray placeholder text
-          value={image}
-          onChangeText={setImage}
-        />
-
-        {/* Product Details */}
-        <Text style={styles.label}>Additional Product Details</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter additional details"
-          placeholderTextColor="#888" // Light gray placeholder text
-          value={details}
-          onChangeText={setDetails}
-          multiline
-        />
-
-        {/* Submit Button */}
-        <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
-          <Text style={styles.addButtonText}>Add Product</Text>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
+    flex: 1,
+    backgroundColor: "#F4F7FE",
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
     flexGrow: 1,
-    padding: 16,
-    backgroundColor: "#A9D8FF", // Light blue background
     justifyContent: "center",
+  },
+  header: {
+    marginBottom: 30,
     alignItems: "center",
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#000", // Black text for title
-    marginBottom: 10,
-    textAlign: "center",
+    color: "#1B3BBB",
   },
   subtitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000", // Black text for subtitle
-    marginBottom: 20,
+    fontSize: 16,
+    color: "#666",
+    marginTop: 5,
     textAlign: "center",
   },
-  form: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000", // Black text for labels
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#A0C4FF", // Light blue border for inputs
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: "#000", // Black text for input fields
-    marginBottom: 16,
-    backgroundColor: "#F0F8FF", // Light blue background for inputs
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  addButton: {
-    backgroundColor: "#007BFF", // Darker blue for button
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 30,
+  statsContainer: {
     alignItems: "center",
-    marginTop: 10,
+    marginBottom: 40,
   },
-  addButtonText: {
-    color: "#fff", // White text for button
-    fontSize: 18,
+  statCard: {
+    backgroundColor: "#1B3BBB",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  statValue: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  statLabel: {
+    fontSize: 14,
+    color: "#fff",
+    marginTop: 5,
+    fontWeight: "600",
+  },
+  logoutButton: {
+    marginTop: 20,
+    paddingVertical: 15,
+    borderWidth: 2,
+    borderColor: "#F44336",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  logoutText: {
+    color: "#F44336",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });
