@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
 import * as Location from "expo-location";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const OrderPlacedScreen = () => {
   const [name, setName] = useState("");
@@ -14,7 +25,7 @@ const OrderPlacedScreen = () => {
     const requestPermissions = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Denied", "Location permissions are required to use this feature.");
+        Alert.alert("Permission Denied", "Location permissions are required.");
       }
     };
     requestPermissions();
@@ -39,13 +50,10 @@ const OrderPlacedScreen = () => {
           }, ${reversedAddress.country || "Unknown Country"}`
         );
       } catch (geoError) {
-        console.error("Reverse Geocoding Error:", geoError);
-        Alert.alert("Error", "Failed to fetch address. Showing raw coordinates instead.");
         setLocationAddress(`Lat: ${coords.latitude}, Lon: ${coords.longitude}`);
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch location. Please try again.");
-      console.error("Location Error:", error);
+      Alert.alert("Error", "Failed to fetch location.");
     } finally {
       setLoadingLocation(false);
     }
@@ -64,50 +72,100 @@ const OrderPlacedScreen = () => {
     setLocationAddress("");
   };
 
+  const InputField = ({ label, icon, value, onChangeText, keyboardType, multiline, lines }) => (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputRow, multiline && styles.inputRowMulti]}>
+        <Ionicons name={icon} size={18} color="#9DA5B4" style={styles.inputIcon} />
+        <TextInput
+          style={[styles.input, multiline && styles.inputMulti]}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType || "default"}
+          multiline={multiline}
+          numberOfLines={lines}
+        />
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Place Your Order</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Title Area */}
+        <View style={styles.titleArea}>
+          <View style={styles.titleIcon}>
+            <Ionicons name="bag-check" size={24} color="#4F6DF5" />
+          </View>
+          <View>
+            <Text style={styles.titleText}>Place Your Order</Text>
+            <Text style={styles.titleSub}>Fill in your delivery details</Text>
+          </View>
+        </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your name"
-        placeholderTextColor="#aaa"
-        value={name}
-        onChangeText={setName}
-      />
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          <InputField
+            label="Full Name"
+            icon="person-outline"
+            value={name}
+            onChangeText={setName}
+          />
+          <InputField
+            label="Mobile Number"
+            icon="call-outline"
+            value={mobileNumber}
+            onChangeText={setMobileNumber}
+            keyboardType="numeric"
+          />
+          <InputField
+            label="Delivery Address"
+            icon="location-outline"
+            value={address}
+            onChangeText={setAddress}
+            multiline
+            lines={3}
+          />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your mobile number"
-        placeholderTextColor="#aaa"
-        keyboardType="numeric"
-        value={mobileNumber}
-        onChangeText={setMobileNumber}
-      />
+          {/* Location */}
+          <View style={styles.locationBox}>
+            <View style={styles.locationInfo}>
+              <Ionicons name="navigate-outline" size={18} color="#4F6DF5" />
+              <Text style={styles.locationText} numberOfLines={2}>
+                {loadingLocation
+                  ? "Fetching location..."
+                  : locationAddress || "Tap to detect your location"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.locationBtn}
+              onPress={getLocation}
+              disabled={loadingLocation}
+              activeOpacity={0.85}
+            >
+              {loadingLocation ? (
+                <ActivityIndicator size="small" color="#4F6DF5" />
+              ) : (
+                <Ionicons name="locate" size={18} color="#4F6DF5" />
+              )}
+            </TouchableOpacity>
+          </View>
 
-      <TextInput
-        style={[styles.input, styles.addressInput]}
-        placeholder="Enter your address"
-        placeholderTextColor="#aaa"
-        value={address}
-        onChangeText={setAddress}
-        multiline
-        numberOfLines={4}
-      />
-
-      <Text style={styles.locationText}>
-        {loadingLocation
-          ? "Fetching location..."
-          : locationAddress || "Press 'Get Location' to fetch your current location."}
-      </Text>
-
-      <TouchableOpacity style={styles.button} onPress={getLocation}>
-        <Text style={styles.buttonText}>Get Location</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.submitButton]} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit</Text>
-      </TouchableOpacity>
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={styles.submitBtn}
+            onPress={handleSubmit}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.submitBtnText}>Place Order</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -115,61 +173,143 @@ const OrderPlacedScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F0F4FF",
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
-    textAlign: "center",
-    color: "#333",
-    marginBottom: 30,
+  scrollContent: {
+    padding: 18,
+    paddingBottom: 40,
+  },
+
+  // Title
+  titleArea: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 14,
+    paddingHorizontal: 4,
+  },
+  titleIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  titleText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F1B4C",
+  },
+  titleSub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+
+  // Form
+  formCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 22,
+    elevation: 4,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+  },
+  fieldGroup: {
+    marginBottom: 18,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#555",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F7FB",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E8ECF4",
+    paddingHorizontal: 14,
+  },
+  inputRowMulti: {
+    alignItems: "flex-start",
+    paddingTop: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#1a1a2e",
+    fontWeight: "500",
   },
-  addressInput: {
-    height: 100,
+  inputMulti: {
+    height: 80,
     textAlignVertical: "top",
   },
-  button: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 15,
-    borderRadius: 10,
+
+  // Location
+  locationBox: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "space-between",
+    backgroundColor: "#F5F7FB",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E8ECF4",
+    padding: 14,
+    marginBottom: 22,
   },
-  submitButton: {
-    backgroundColor: "#2196F3",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+  locationInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 10,
   },
   locationText: {
+    fontSize: 13,
+    color: "#888",
+    fontWeight: "500",
+    flex: 1,
+  },
+  locationBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+  },
+
+  // Submit
+  submitBtn: {
+    backgroundColor: "#0F1B4C",
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    elevation: 6,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  submitBtnText: {
+    color: "#fff",
     fontSize: 16,
-    color: "#555",
-    textAlign: "center",
-    marginBottom: 20,
+    fontWeight: "800",
   },
 });
 
