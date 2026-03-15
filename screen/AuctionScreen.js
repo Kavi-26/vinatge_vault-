@@ -9,7 +9,12 @@ import {
   Image,
   Alert,
   Modal,
+  StatusBar,
+  Dimensions,
 } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+
+const { width } = Dimensions.get("window");
 
 const AuctionScreen = ({ navigation }) => {
   const [auctionItems, setAuctionItems] = useState([
@@ -18,21 +23,21 @@ const AuctionScreen = ({ navigation }) => {
       name: "Van Gogh's 'The Starry Night'",
       image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY9cHgsMHfKoLe6ODQQvFJ39UMFMtNnf6i2Q&s",
       highestBid: 150000,
-      timeRemaining: 30, // seconds
+      timeRemaining: 30,
     },
     {
       id: "2",
       name: "Aztec Sun Stone",
       image: "https://assets.alot.com/assets/common/entertainment/u12806_slide_11131.jpg",
       highestBid: 180000,
-      timeRemaining: 210, // seconds
+      timeRemaining: 210,
     },
     {
       id: "3",
       name: "Coins of Raja Raja Chola",
       image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjY1pC1fHccH35NOz6qQurVyT7o5OafLKUjg&s",
       highestBid: 50000,
-      timeRemaining: 310, // seconds for testing
+      timeRemaining: 310,
     },
   ]);
 
@@ -68,7 +73,7 @@ const AuctionScreen = ({ navigation }) => {
     if (parseInt(bidValue) <= item.highestBid) {
       Alert.alert(
         "Low Bid",
-        `Your bid must be higher than the current highest bid of Rs.${item.highestBid}.`
+        `Your bid must be higher than the current highest bid of ₹${item.highestBid.toLocaleString()}.`
       );
       return;
     }
@@ -96,69 +101,138 @@ const AuctionScreen = ({ navigation }) => {
     return `${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.image} />
-      <View style={styles.infoContainer}>
-        <Text style={styles.title}>{item.name}</Text>
-        <Text style={styles.bid}>Highest Bid: Rs.{item.highestBid}</Text>
-        <Text style={styles.timer}>
-          ⏳ {renderCountdown(item.timeRemaining)}
-        </Text>
+  const getTimerColor = (time) => {
+    if (time === 0) return "#999";
+    if (time < 60) return "#EF5350";
+    return "#4F6DF5";
+  };
+
+  const renderItem = ({ item }) => {
+    const isExpired = item.timeRemaining === 0;
+
+    return (
+      <View style={styles.card}>
+        <Image source={{ uri: item.image }} style={styles.cardImage} />
+        <View style={styles.cardBody}>
+          {/* Title & Timer Row */}
+          <View style={styles.titleRow}>
+            <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+            <View style={[styles.timerPill, { backgroundColor: isExpired ? "#F5F5F5" : getTimerColor(item.timeRemaining) + "15" }]}>
+              <Ionicons name="time-outline" size={14} color={getTimerColor(item.timeRemaining)} />
+              <Text style={[styles.timerText, { color: getTimerColor(item.timeRemaining) }]}>
+                {isExpired ? "Ended" : renderCountdown(item.timeRemaining)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Current Bid */}
+          <View style={styles.bidRow}>
+            <Text style={styles.bidLabel}>Current Bid</Text>
+            <Text style={styles.bidAmount}>₹{item.highestBid.toLocaleString()}</Text>
+          </View>
+
+          {/* Input & Button */}
+          {!isExpired && (
+            <View style={styles.actionArea}>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.rupeePrefix}>₹</Text>
+                <TextInput
+                  style={styles.bidInput}
+                  keyboardType="numeric"
+                  value={bidValue}
+                  onChangeText={setBidValue}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.bidBtn}
+                onPress={() => handleBid(item.id)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="hammer" size={16} color="#fff" />
+                <Text style={styles.bidBtnText}>Bid</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isExpired && (
+            <View style={styles.expiredBanner}>
+              <Ionicons name="checkmark-circle" size={16} color="#999" />
+              <Text style={styles.expiredText}>Auction has ended</Text>
+            </View>
+          )}
+        </View>
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your bid"
-        keyboardType="numeric"
-        value={bidValue}
-        onChangeText={setBidValue}
-      />
-      <TouchableOpacity
-        style={[styles.button, item.timeRemaining === 0 && styles.buttonDisabled]}
-        onPress={() => handleBid(item.id)}
-        disabled={item.timeRemaining === 0}
-      >
-        <Text style={styles.buttonText}>Place Bid</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Live Auctions</Text>
+          <Text style={styles.headerSub}>{auctionItems.length} active item{auctionItems.length !== 1 ? "s" : ""}</Text>
+        </View>
+        <View style={styles.liveIndicator}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>LIVE</Text>
+        </View>
+      </View>
+
       <FlatList
         data={auctionItems}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyCircle}>
+              <Ionicons name="hammer-outline" size={40} color="#C5CAE9" />
+            </View>
+            <Text style={styles.emptyTitle}>No Auctions</Text>
+            <Text style={styles.emptySub}>Check back later for live auctions.</Text>
+          </View>
+        }
       />
 
+      {/* Payment Modal */}
       <Modal
         visible={paymentModalVisible}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setPaymentModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {itemToPay && (
               <>
-                <Text style={styles.modalTitle}>Payment for {itemToPay.name}</Text>
-                <Text style={styles.modalText}>Highest Bid: Rs.{itemToPay.highestBid}</Text>
+                <View style={styles.modalIconWrap}>
+                  <Ionicons name="trophy" size={32} color="#4F6DF5" />
+                </View>
+                <Text style={styles.modalTitle}>You Won!</Text>
+                <Text style={styles.modalItemName}>{itemToPay.name}</Text>
+                <View style={styles.modalAmountBox}>
+                  <Text style={styles.modalAmountLabel}>Winning Bid</Text>
+                  <Text style={styles.modalAmount}>₹{itemToPay.highestBid.toLocaleString()}</Text>
+                </View>
 
-                {/* Replace the QR code with an image */}
                 <Image
-                  source={require("../assets/gpay1.jpg")} // Use your QR image from assets
-                  style={{ width: 200, height: 200, marginBottom: 20 }}
+                  source={require("../assets/gpay1.jpg")}
+                  style={styles.qrImage}
                 />
 
                 <TouchableOpacity
-                  style={styles.button}
+                  style={styles.modalBtn}
                   onPress={() => {
                     setPaymentModalVisible(false);
-                    navigation.navigate("OrderPlaced"); // Ensure "OrderPlaced" is registered in the navigator
+                    navigation.navigate("OrderPlaced");
                   }}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.buttonText}>close</Text>
+                  <Text style={styles.modalBtnText}>Done</Text>
+                  <Ionicons name="checkmark" size={18} color="#fff" />
                 </TouchableOpacity>
               </>
             )}
@@ -167,106 +241,301 @@ const AuctionScreen = ({ navigation }) => {
       </Modal>
     </View>
   );
-}
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#a9d0f5", // Light blue background
-    paddingHorizontal: 15,
-    paddingTop: 20,
+    backgroundColor: "#F0F4FF",
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 22,
+    paddingTop: 15,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8ECF4",
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F1B4C",
+  },
+  headerSub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  liveIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF5350",
+  },
+  liveText: {
+    color: "#EF5350",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  listContent: {
+    padding: 18,
+    paddingBottom: 40,
+  },
+
+  // Card
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 15,
-    marginBottom: 20,
-    padding: 20,
-    shadowColor: "#1976d2", // Blue shadow
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 10,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    marginBottom: 16,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#bbdefb", // Soft blue border
+    elevation: 3,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
-  image: {
+  cardImage: {
     width: "100%",
     height: 180,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#bbdefb", // Soft blue border around the image
+    backgroundColor: "#EEF2FF",
   },
-  infoContainer: {
-    marginBottom: 15,
+  cardBody: {
+    padding: 18,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "black", // Dark blue title
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
   },
-  bid: {
-    fontSize: 18,
-    color: "black", // Medium blue for bid
-    marginVertical: 5,
-  },
-  timer: {
-    fontSize: 18,
-    color: "black", // Bright blue for timer
-    fontWeight: "bold",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#1e88e5", // Light blue input border
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 18,
-    marginBottom: 15,
-    backgroundColor: "#f0f7ff", // Very light blue background for input
-  },
-  button: {
-     
-     backgroundColor: "#2196f3", // Blue button
-        paddingVertical: 15,
-        borderRadius: 8,
-        alignItems: 'center',
-        width: '100%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  buttonDisabled: {
-    backgroundColor: "#90caf9", // Disabled light blue button
-  },
-  modalContainer: {
+  itemName: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1a1a2e",
     flex: 1,
+    marginRight: 10,
+  },
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  bidRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F4FF",
+  },
+  bidLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  bidAmount: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#0F1B4C",
+  },
+  actionArea: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F7FB",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E8ECF4",
+    paddingHorizontal: 14,
+  },
+  rupeePrefix: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#999",
+    marginRight: 6,
+  },
+  bidInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#1a1a2e",
+    fontWeight: "600",
+  },
+  bidBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0F1B4C",
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    gap: 6,
+    elevation: 4,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  bidBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  expiredBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F5F5F5",
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  expiredText: {
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  // Empty
+  emptyWrap: {
+    alignItems: "center",
+    marginTop: 80,
+  },
+  emptyCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EEF2FF",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  emptySub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 4,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,27,76,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
   modalContent: {
-    backgroundColor: "#ffffff",
-    padding: 25,
-    borderRadius: 20,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 28,
+    padding: 28,
     alignItems: "center",
-    width: "80%",
+    elevation: 12,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+  },
+  modalIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#0d47a1", // Dark blue modal title
+    fontWeight: "900",
+    color: "#0F1B4C",
+    marginBottom: 4,
   },
-  modalText: {
-    fontSize: 20,
-    marginBottom: 30,
-    color: "black", // Medium blue modal text
+  modalItemName: {
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "500",
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  modalAmountBox: {
+    backgroundColor: "#F5F7FB",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    marginBottom: 20,
+    width: "100%",
+  },
+  modalAmountLabel: {
+    fontSize: 11,
+    color: "#999",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modalAmount: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#0F1B4C",
+    marginTop: 4,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  modalBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0F1B4C",
+    paddingVertical: 16,
+    borderRadius: 16,
+    width: "100%",
+    gap: 8,
+    elevation: 6,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
 

@@ -1,10 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Alert, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  Alert,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  StatusBar,
+  Dimensions,
+} from "react-native";
 import { auth } from "../firebaseConfig";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "react-native-vector-icons/Ionicons";
+
+const { width } = Dimensions.get("window");
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -52,7 +66,7 @@ const ProfileScreen = ({ navigation }) => {
         setLoading(false);
       } catch (error) {
         setLoading(false);
-        Alert.alert("Error", "There was an error fetching your data. Please try again.");
+        Alert.alert("Error", "There was an error fetching your data.");
       }
     }
   };
@@ -67,17 +81,25 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const onLogoutHandler = async () => {
-    try {
-      await signOut(auth);
-      Alert.alert("Logout", "You have been logged out successfully!");
-      navigation.replace("Login");
-    } catch (error) {
-      Alert.alert("Oops", "Something went wrong! Please try again.");
-    }
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut(auth);
+            // Navigation is handled automatically by onAuthStateChanged in App.js
+          } catch (error) {
+            Alert.alert("Oops", "Something went wrong!");
+          }
+        },
+      },
+    ]);
   };
 
   const navigateToAdmin = () => {
-    navigation.navigate("Admin");
+    navigation.navigate("AdminTabs");
   };
 
   const toggleItemDetails = (index) => {
@@ -87,95 +109,176 @@ const ProfileScreen = ({ navigation }) => {
     }));
   };
 
+  const getInitials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
+    return parts.length > 1
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : parts[0][0].toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loaderScreen}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
+        <ActivityIndicator size="large" color="#4F6DF5" />
+        <Text style={styles.loaderText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#00B0FF" style={styles.spinner} />
-      ) : (
-        <>
-          <View style={styles.profileContainer}>
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.profileImage} />
-            ) : (
-              <Ionicons name="person-circle-outline" size={90} color="#ffffff" />
-            )}
-            <Text style={styles.userName}>{user?.displayName}</Text>
-            <Text style={styles.email}>{user?.email}</Text>
-          </View>
-
-          <Text style={styles.historyTitle}>Shop History</Text>
-          <ScrollView
-            style={styles.historyList}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          >
-            {shopHistory.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.historyCard}
-                onPress={() => toggleItemDetails(index)}
-              >
-                <View style={styles.historyCardHeader}>
-                  <Text style={styles.historyCardTitle}>{item.itemName}</Text>
-                  <Ionicons
-                    name={expandedItems[index] ? "chevron-up-outline" : "chevron-down-outline"}
-                    size={20}
-                    color="#333"
-                  />
-                </View>
-                {expandedItems[index] && (
-                  <>
-                    <Text style={styles.historyCardText}>Purchased on: {item.purchaseDate}</Text>
-                    <Text style={styles.historyCardText}>Price: {item.price}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.historyTitle}>Auction History</Text>
-          <ScrollView
-            style={styles.historyList}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          >
-            {auctionHistory.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.historyCard}
-                onPress={() => toggleItemDetails(index + shopHistory.length)}
-              >
-                <View style={styles.historyCardHeader}>
-                  <Text style={styles.historyCardTitle}>{item.auctionItem}</Text>
-                  <Ionicons
-                    name={expandedItems[index + shopHistory.length] ? "chevron-up-outline" : "chevron-down-outline"}
-                    size={20}
-                    color="#333"
-                  />
-                </View>
-                {expandedItems[index + shopHistory.length] && (
-                  <>
-                    <Text style={styles.historyCardText}>Bid Date: {item.bidDate}</Text>
-                    <Text style={styles.historyCardText}>Bid Amount: {item.bidAmount}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+      <StatusBar barStyle="light-content" backgroundColor="#0F1B4C" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.decorCircle1} />
+          <View style={styles.decorCircle2} />
+          
+          {user?.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={styles.profileImage} />
+          ) : (
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{getInitials(user?.displayName)}</Text>
+            </View>
+          )}
+          <Text style={styles.userName}>{user?.displayName}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
 
           {isAdmin && (
-            <TouchableOpacity style={styles.adminButton} onPress={navigateToAdmin}>
-              <Ionicons name="shield-checkmark-outline" size={24} color="#fff" />
-              <Text style={styles.adminButtonText}>Admin Panel</Text>
+            <View style={styles.adminBadge}>
+              <Ionicons name="shield-checkmark" size={12} color="#4F6DF5" />
+              <Text style={styles.adminBadgeText}>Administrator</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Stats Strip */}
+        <View style={styles.statsStrip}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{shopHistory.length}</Text>
+            <Text style={styles.statLabel}>Purchases</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{auctionHistory.length}</Text>
+            <Text style={styles.statLabel}>Bids</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>
+              {isAdmin ? "Admin" : "User"}
+            </Text>
+            <Text style={styles.statLabel}>Role</Text>
+          </View>
+        </View>
+
+        {/* Shop History Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIcon, { backgroundColor: "#E8F5E9" }]}>
+                <Ionicons name="bag-check" size={16} color="#4CAF50" />
+              </View>
+              <Text style={styles.sectionTitle}>Shop History</Text>
+            </View>
+            <Text style={styles.sectionCount}>{shopHistory.length}</Text>
+          </View>
+
+          {shopHistory.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.historyCard}
+              onPress={() => toggleItemDetails(index)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.historyTop}>
+                <View style={styles.historyInfo}>
+                  <Text style={styles.historyName}>{item.itemName}</Text>
+                  <Text style={styles.historyPrice}>{item.price}</Text>
+                </View>
+                <Ionicons
+                  name={expandedItems[index] ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color="#999"
+                />
+              </View>
+              {expandedItems[index] && (
+                <View style={styles.historyDetails}>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="calendar-outline" size={14} color="#999" />
+                    <Text style={styles.detailText}>Purchased: {item.purchaseDate}</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Auction History Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIcon, { backgroundColor: "#FFF3E0" }]}>
+                <Ionicons name="hammer" size={16} color="#FF6D00" />
+              </View>
+              <Text style={styles.sectionTitle}>Auction History</Text>
+            </View>
+            <Text style={styles.sectionCount}>{auctionHistory.length}</Text>
+          </View>
+
+          {auctionHistory.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.historyCard}
+              onPress={() => toggleItemDetails(index + shopHistory.length)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.historyTop}>
+                <View style={styles.historyInfo}>
+                  <Text style={styles.historyName}>{item.auctionItem}</Text>
+                  <Text style={styles.historyPrice}>{item.bidAmount}</Text>
+                </View>
+                <Ionicons
+                  name={expandedItems[index + shopHistory.length] ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color="#999"
+                />
+              </View>
+              {expandedItems[index + shopHistory.length] && (
+                <View style={styles.historyDetails}>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="calendar-outline" size={14} color="#999" />
+                    <Text style={styles.detailText}>Bid Date: {item.bidDate}</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.section}>
+          {isAdmin && (
+            <TouchableOpacity style={styles.adminBtn} onPress={navigateToAdmin} activeOpacity={0.85}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#fff" />
+              <Text style={styles.adminBtnText}>Open Admin Panel</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogoutHandler}>
-            <Ionicons name="log-out-outline" size={24} color="#fff" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
+          <TouchableOpacity style={styles.logoutBtn} onPress={onLogoutHandler} activeOpacity={0.85}>
+            <Ionicons name="log-out-outline" size={20} color="#EF5350" />
+            <Text style={styles.logoutBtnText}>Log Out</Text>
           </TouchableOpacity>
-        </>
-      )}
+        </View>
+
+        <View style={{ height: 30 }} />
+      </ScrollView>
     </View>
   );
 };
@@ -183,112 +286,258 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#F0F4FF",
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#1F2A44",
-    marginBottom: 8,
-    textAlign: "center",
-    fontFamily: "Arial",
-  },
-  profileContainer: {
+  loaderScreen: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#00B0FF",
-    padding: 4,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: "#ffffff",
+    backgroundColor: "#F0F4FF",
+  },
+  loaderText: {
+    marginTop: 12,
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+
+  // Profile Header
+  profileHeader: {
+    backgroundColor: "#0F1B4C",
+    paddingTop: 50,
+    paddingBottom: 35,
+    alignItems: "center",
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    overflow: "hidden",
+  },
+  decorCircle1: {
+    position: "absolute",
+    top: -20,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(79,109,245,0.12)",
+  },
+  decorCircle2: {
+    position: "absolute",
+    bottom: -15,
+    left: -25,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "rgba(79,109,245,0.08)",
   },
   profileImage: {
-    width: 500,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.3)",
+    marginBottom: 14,
+  },
+  avatarCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#4F6DF5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#fff",
   },
   userName: {
-    fontSize: 26,
-    fontWeight: "600",
-    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#fff",
   },
-  email: {
-    fontSize: 16,
-    color: "#e0e0e0",
+  userEmail: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.55)",
+    marginTop: 4,
+    fontWeight: "500",
   },
-  historyTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
-    marginVertical: 12,
-    marginLeft: 10,
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(79,109,245,0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 5,
   },
-  historyList: {
-    marginBottom: 20,
+  adminBadgeText: {
+    color: "#8FA4FF",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  historyCard: {
-    backgroundColor: "#ffffff",
-    padding: 18,
-    marginBottom: 15,
-    borderRadius: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+
+  // Stats
+  statsStrip: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
     marginHorizontal: 20,
-    borderLeftWidth: 6,
-    borderLeftColor: "#00B0FF",
+    marginTop: -20,
+    borderRadius: 20,
+    padding: 18,
+    justifyContent: "space-around",
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
-  historyCardTitle: {
+  statItem: {
+    alignItems: "center",
+  },
+  statNumber: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#1F2A44",
+    fontWeight: "900",
+    color: "#0F1B4C",
   },
-  historyCardHeader: {
+  statLabel: {
+    fontSize: 11,
+    color: "#999",
+    marginTop: 4,
+    fontWeight: "600",
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "#E8ECF4",
+  },
+
+  // Section
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  sectionCount: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#999",
+  },
+
+  // History Card
+  historyCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+  },
+  historyTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  adminButton: {
+  historyInfo: {
+    flex: 1,
+  },
+  historyName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1a1a2e",
+  },
+  historyPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#4F6DF5",
+    marginTop: 3,
+  },
+  historyDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F4FF",
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  detailText: {
+    fontSize: 13,
+    color: "#888",
+    fontWeight: "500",
+  },
+
+  // Buttons
+  adminBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FF5722",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    marginTop: 20,
+    backgroundColor: "#4F6DF5",
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 8,
+    marginBottom: 12,
+    elevation: 4,
+    shadowColor: "#4F6DF5",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  adminButtonText: {
+  adminBtnText: {
     color: "#fff",
-    fontSize: 18,
-    marginLeft: 10,
+    fontSize: 15,
+    fontWeight: "800",
+    flex: 1,
+    textAlign: "center",
   },
-  logoutButton: {
+  logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#00B0FF",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    marginTop: 20,
+    backgroundColor: "#fff",
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: "#FFCDD2",
   },
-  logoutButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    marginLeft: 10,
-  },
-  spinner: {
-    marginTop: 50,
+  logoutBtnText: {
+    color: "#EF5350",
+    fontSize: 15,
+    fontWeight: "800",
   },
 });
 
