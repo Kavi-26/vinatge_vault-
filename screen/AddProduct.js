@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,39 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { db } from "../firebaseConfig";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 const AddProduct = ({ navigation, route }) => {
-  const existingProduct = route.params?.product || null;
+  const [existingProduct, setExistingProduct] = useState(null);
+  const [productName, setProductName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [image, setImage] = useState("");
+  const [details, setDetails] = useState("");
 
-  const [productName, setProductName] = useState(existingProduct?.name || "");
-  const [description, setDescription] = useState(existingProduct?.about || "");
-  const [price, setPrice] = useState(existingProduct?.price?.toString() || "");
-  const [image, setImage] = useState(existingProduct?.image || "");
-  const [details, setDetails] = useState(existingProduct?.detail || "");
+  // Sync form state with route params whenever this tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      const product = route.params?.product || null;
+      setExistingProduct(product);
+      if (product) {
+        setProductName(product.name || "");
+        setDescription(product.about || "");
+        setPrice(product.price?.toString() || "");
+        setImage(product.image || "");
+        setDetails(product.detail || "");
+      } else {
+        setProductName("");
+        setDescription("");
+        setPrice("");
+        setImage("");
+        setDetails("");
+      }
+    }, [route.params?.product])
+  );
 
   const handleAddProduct = async () => {
     if (!productName || !description || !price || !image) {
@@ -47,6 +68,8 @@ const AddProduct = ({ navigation, route }) => {
         Alert.alert("Success", "Product added successfully!");
       }
 
+      // Clear params so the form resets next time
+      navigation.setParams({ product: undefined });
       navigation.goBack();
     } catch (error) {
       console.error("Error saving product:", error);

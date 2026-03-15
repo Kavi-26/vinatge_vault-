@@ -57,7 +57,7 @@ const Register = ({ navigation }) => {
             });
 
             Alert.alert("Success", "Registration successful!");
-            navigation.navigate("Login");
+            // Navigation is handled automatically by onAuthStateChanged in App.js
         } catch (error) {
             Alert.alert("Error", error.message);
         } finally {
