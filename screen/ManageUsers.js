@@ -137,7 +137,6 @@ const ManageUsers = () => {
                       style={styles.input}
                       value={editUsername}
                       onChangeText={setEditUsername}
-                      placeholder="Enter new username"
                       placeholderTextColor="#999"
                     />
                   </View>
