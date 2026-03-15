@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,23 +7,29 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-} from 'react-native';
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
 import { db } from "../firebaseConfig";
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection } from "firebase/firestore";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 
 const HomeScreen = ({ navigation }) => {
   const [categories, setCategories] = useState([]);
   const [auctions, setAuctions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const scrollRefs = useRef([]);
-  const scrollPositions = useRef({}); // Keeps track of scroll position for each category
+  const scrollPositions = useRef({});
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
+        // Fetch products
         const productsCollection = await getDocs(collection(db, "dproducts"));
-        const productsData = productsCollection.docs.map(doc => ({
+        const productsData = productsCollection.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
@@ -37,32 +43,29 @@ const HomeScreen = ({ navigation }) => {
           return acc;
         }, {});
 
-        const formattedCategories = Object.keys(groupedCategories).map(key => ({
-          title: key,
-          data: groupedCategories[key],
-        }));
-
+        const formattedCategories = Object.keys(groupedCategories).map(
+          (key) => ({
+            title: key,
+            data: groupedCategories[key],
+          })
+        );
         setCategories(formattedCategories);
-      } catch (error) {
-        console.error("Error fetching products: ", error);
-      }
-    };
 
-    const fetchAuctions = async () => {
-      try {
+        // Fetch auctions
         const auctionCollection = await getDocs(collection(db, "auction pro"));
-        const auctionData = auctionCollection.docs.map(doc => ({
+        const auctionData = auctionCollection.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setAuctions(auctionData);
       } catch (error) {
-        console.error("Error fetching auctions: ", error);
+        console.error("Error fetching data: ", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchProducts();
-    fetchAuctions();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -72,10 +75,9 @@ const HomeScreen = ({ navigation }) => {
         if (ref) {
           const currentIndex = scrollPositions.current[index] || 0;
           const nextIndex = (currentIndex + 1) % category.data.length;
-
-          const productWidth = 200; // Product width including margin
-          const offset = nextIndex * productWidth - (screenWidth - productWidth) / 2;
-
+          const productWidth = 200;
+          const offset =
+            nextIndex * productWidth - (screenWidth - productWidth) / 2;
           ref.scrollTo({ x: offset, animated: true });
           scrollPositions.current[index] = nextIndex;
         }
@@ -93,187 +95,460 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate("AuctionDetails", { auction });
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loaderScreen}>
+        <StatusBar barStyle="light-content" backgroundColor="#0F1B4C" />
+        <ActivityIndicator size="large" color="#4F6DF5" />
+        <Text style={styles.loaderText}>Loading treasures...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Discount Categories */}
-      {categories.map((category, index) => (
-        <View key={category.title} style={styles.categoryContainer}>
-          <Text style={styles.categoryTitle}>Top Discount</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContainer}
-            ref={(ref) => (scrollRefs.current[index] = ref)}
-          >
-            {category.data.map((item, itemIndex) => (
-              <TouchableOpacity key={item.id} onPress={() => handleDetailView(item)}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F1B4C" />
+      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+        {/* Hero Header */}
+        <View style={styles.header}>
+          <View style={styles.decorCircle1} />
+          <View style={styles.decorCircle2} />
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greeting}>Discover</Text>
+              <Text style={styles.headerTitle}>Vintage Vault</Text>
+            </View>
+          </View>
+          <Text style={styles.headerSub}>
+            Explore rare antiques, art, and collectibles
+          </Text>
+        </View>
+
+        {/* Discount Categories */}
+        {categories.map((category, index) => (
+          <View key={category.title} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
                 <View
-                  style={[
-                    styles.productContainer,
-                    itemIndex === (scrollPositions.current[index] || 0) && styles.centeredProduct,
-                  ]}
+                  style={[styles.sectionIcon, { backgroundColor: "#FFF3E0" }]}
                 >
-                  {/* Display Discount Badge */}
-                  {item.discount && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>{item.discount}% OFF</Text>
+                  <Ionicons name="pricetag" size={16} color="#FF6D00" />
+                </View>
+                <Text style={styles.sectionTitle}>Top Discounts</Text>
+              </View>
+              <View style={styles.countBadge}>
+                <Text style={styles.countText}>{category.data.length}</Text>
+              </View>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+              ref={(ref) => (scrollRefs.current[index] = ref)}
+            >
+              {category.data.map((item, itemIndex) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => handleDetailView(item)}
+                  activeOpacity={0.85}
+                >
+                  <View
+                    style={[
+                      styles.productCard,
+                      itemIndex ===
+                        (scrollPositions.current[index] || 0) &&
+                        styles.productCardActive,
+                    ]}
+                  >
+                    {/* Discount Badge */}
+                    {item.discount && (
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>
+                          {item.discount}% OFF
+                        </Text>
+                      </View>
+                    )}
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.productImage}
+                    />
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.productPrice}>
+                        ₹{item.price?.toLocaleString() || item.price}
+                      </Text>
+                      <Text style={styles.productDesc} numberOfLines={1}>
+                        {item.about}
+                      </Text>
                     </View>
-                  )}
-                  <Image source={{ uri: item.image }} style={styles.productImage} />
-                  <Text style={styles.productName}>{item.name}</Text>
-                  <Text style={styles.productPrice}>Rs.{item.price}</Text>
-                  <Text style={styles.productDescription}>{item.about}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ))}
+
+        {/* Upcoming Auctions Section */}
+        {auctions.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <View
+                  style={[styles.sectionIcon, { backgroundColor: "#FFEBEE" }]}
+                >
+                  <Ionicons name="hammer" size={16} color="#EF5350" />
+                </View>
+                <Text style={styles.sectionTitle}>Upcoming Auctions</Text>
+              </View>
+              <View style={styles.liveBadge}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>LIVE</Text>
+              </View>
+            </View>
+
+            {auctions.map((auction) => (
+              <TouchableOpacity
+                key={auction.id}
+                onPress={() => handleAuctionView(auction)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.auctionCard}>
+                  <Image
+                    source={{ uri: auction.image }}
+                    style={styles.auctionImage}
+                  />
+                  <View style={styles.auctionInfo}>
+                    <Text style={styles.auctionName} numberOfLines={1}>
+                      {auction.name}
+                    </Text>
+                    <Text style={styles.auctionDesc} numberOfLines={2}>
+                      {auction.info}
+                    </Text>
+                    <View style={styles.auctionMeta}>
+                      <View style={styles.metaRow}>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={12}
+                          color="#999"
+                        />
+                        <Text style={styles.metaText}>
+                          {auction.date} • {auction.time}
+                        </Text>
+                      </View>
+                      <Text style={styles.auctionPrice}>
+                        ₹{auction.price?.toLocaleString() || auction.price}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}
-          </ScrollView>
-        </View>
-      ))}
+          </View>
+        )}
 
-      {/* Upcoming Auctions Section */}
-      <View style={styles.auctionContainer}>
-        <Text style={styles.auctionTitle}>Upcoming Auctions</Text>
-        {auctions.map((auction) => (
-          <TouchableOpacity
-            key={auction.id}
-            onPress={() => handleAuctionView(auction)}
-          >
-            <View style={styles.auctionItem}>
-              <Image source={{ uri: auction.image }} style={styles.auctionImage} />
-              <View style={styles.auctionDetails}>
-                <Text style={styles.auctionName}>{auction.name}</Text>
-                <Text style={styles.auctionInfo}>{auction.info}</Text>
-                <Text style={styles.auctionDate}>
-                  Date: {auction.date} | Time: {auction.time}
-                </Text>
-                <Text style={styles.auctionPrice}>Starting Price: Rs.{auction.price}</Text>
-              </View>
+        {/* Empty state if nothing */}
+        {categories.length === 0 && auctions.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyCircle}>
+              <Ionicons name="diamond-outline" size={40} color="#C5CAE9" />
             </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
+            <Text style={styles.emptyTitle}>No Items Yet</Text>
+            <Text style={styles.emptySub}>
+              Check back soon for new arrivals.
+            </Text>
+          </View>
+        )}
+
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#a9d0f5',
-    padding: 10,
+    backgroundColor: "#F0F4FF",
   },
-  categoryContainer: {
-    marginVertical: 20,
+  loaderScreen: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F0F4FF",
   },
-  categoryTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 10,
+  loaderText: {
+    marginTop: 12,
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "500",
   },
-  horizontalScrollContainer: {
-    flexDirection: 'row',
+
+  // Header
+  header: {
+    backgroundColor: "#0F1B4C",
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 22,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: "hidden",
   },
-  productContainer: {
-    backgroundColor: '#fff',
+  decorCircle1: {
+    position: "absolute",
+    top: -25,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(79,109,245,0.12)",
+  },
+  decorCircle2: {
+    position: "absolute",
+    bottom: -20,
+    left: -25,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "rgba(79,109,245,0.08)",
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  greeting: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  searchBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerSub: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 13,
+    marginTop: 12,
+    fontWeight: "500",
+  },
+
+  // Section
+  section: {
+    marginTop: 24,
+    paddingHorizontal: 18,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
-    padding: 10,
-    marginHorizontal: 10,
-    width: 180,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  centeredProduct: {
-    transform: [{ scale: 1.1 }], // Scale the centered product for emphasis
-    borderColor: '#FFD700',
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  countBadge: {
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  countText: {
+    color: "#4F6DF5",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#EF5350",
+  },
+  liveText: {
+    color: "#EF5350",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+
+  // Horizontal Products
+  horizontalScroll: {
+    paddingLeft: 0,
+    paddingRight: 10,
+  },
+  productCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    width: 175,
+    marginRight: 14,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  productCardActive: {
     borderWidth: 2,
+    borderColor: "#4F6DF5",
+    transform: [{ scale: 1.03 }],
   },
   productImage: {
-    width: '100%',
+    width: "100%",
     height: 140,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: "#EEF2FF",
+  },
+  productInfo: {
+    padding: 12,
   },
   productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1a1a2e",
   },
   productPrice: {
-    fontSize: 14,
-    color: '#4CAF50',
-    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#4F6DF5",
+    marginTop: 4,
   },
-  productDescription: {
-    fontSize: 12,
-    color: '#777',
-    textAlign: 'center',
+  productDesc: {
+    fontSize: 11,
+    color: "#999",
+    marginTop: 3,
   },
   discountBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     left: 10,
-    backgroundColor: '#FF6347',
-    padding: 5,
-    borderRadius: 5,
-    zIndex: 1, // Ensure it sits on top of other content
+    backgroundColor: "#EF5350",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    zIndex: 1,
   },
   discountText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
   },
-  auctionContainer: {
-    marginTop: 20,
-  },
-  auctionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-  },
-  auctionItem: {
-    flexDirection: 'row',
-    marginBottom: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+
+  // Auction Cards
+  auctionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    flexDirection: "row",
+    padding: 14,
+    marginBottom: 12,
     elevation: 3,
+    shadowColor: "#0F1B4C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   auctionImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  auctionDetails: {
-    flex: 1,
-  },
-  auctionName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    width: 90,
+    height: 90,
+    borderRadius: 14,
+    backgroundColor: "#EEF2FF",
+    marginRight: 14,
   },
   auctionInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginVertical: 5,
+    flex: 1,
+    justifyContent: "center",
   },
-  auctionDate: {
+  auctionName: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  auctionDesc: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  auctionMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 11,
+    color: "#999",
+    fontWeight: "500",
   },
   auctionPrice: {
     fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontWeight: "800",
+    color: "#4F6DF5",
+  },
+
+  // Empty
+  emptyWrap: {
+    alignItems: "center",
+    marginTop: 60,
+  },
+  emptyCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a1a2e",
+  },
+  emptySub: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 4,
   },
 });
 
