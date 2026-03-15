@@ -9,15 +9,17 @@ import {
   ScrollView,
 } from "react-native";
 import { db } from "../firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-const AddProduct = ({ navigation }) => {
-  const [productName, setProductName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [image, setImage] = useState("");
-  const [details, setDetails] = useState("");
+const AddProduct = ({ navigation, route }) => {
+  const existingProduct = route.params?.product || null;
+
+  const [productName, setProductName] = useState(existingProduct?.name || "");
+  const [description, setDescription] = useState(existingProduct?.about || "");
+  const [price, setPrice] = useState(existingProduct?.price?.toString() || "");
+  const [image, setImage] = useState(existingProduct?.image || "");
+  const [details, setDetails] = useState(existingProduct?.detail || "");
 
   const handleAddProduct = async () => {
     if (!productName || !description || !price || !image) {
@@ -26,20 +28,28 @@ const AddProduct = ({ navigation }) => {
     }
 
     try {
-      const newProduct = {
+      const productData = {
         name: productName,
         about: description,
         price: parseFloat(price),
         image: image,
         detail: details,
-        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
-      await addDoc(collection(db, "products"), newProduct);
-      Alert.alert("Success", "Product added successfully!");
-      navigation.navigate("Products");
+      if (existingProduct) {
+        await updateDoc(doc(db, "products", existingProduct.id), productData);
+        Alert.alert("Success", "Product updated successfully!");
+      } else {
+        productData.createdAt = new Date();
+        await addDoc(collection(db, "products"), productData);
+        Alert.alert("Success", "Product added successfully!");
+      }
+
+      navigation.goBack();
     } catch (error) {
-      Alert.alert("Error", "Failed to add the product.");
+      console.error("Error saving product:", error);
+      Alert.alert("Error", `Failed to ${existingProduct ? "update" : "add"} the product.`);
     }
   };
 
@@ -90,7 +100,7 @@ const AddProduct = ({ navigation }) => {
         />
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleAddProduct}>
-          <Text style={styles.buttonText}>Submit Product</Text>
+          <Text style={styles.buttonText}>{existingProduct ? "Update Product" : "Submit Product"}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
